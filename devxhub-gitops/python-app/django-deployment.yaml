@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-deployment
+  namespace: devxhub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      containers:
+      - name: django
+        image: iqbalkhan319/devxhub:1.5  # Your Django app image
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "300m"  # 0.1 CPU
+            memory: "128Mi"
+          limits:
+            cpu: "500m"  # 0.5 CPU
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /  # Adjust this based on your Django app's health check endpoint
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /  # Adjust this based on your Django app's health check endpoint
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secret
+        volumeMounts:
+        - name: static-storage
+          mountPath: /app/static/static_root
+      volumes:
+      - name: static-storage
+        persistentVolumeClaim:
+          claimName: static-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-service
+  namespace: devxhub
+spec:
+  type: ClusterIP
+  selector:
+    app: django
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+

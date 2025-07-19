@@ -1,0 +1,139 @@
+{% extends 'eshop/index.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% crispy example_form example_form.helper %}
+
+
+{% block css %}
+<style>
+    #paypal-button-container{
+        display: none;
+    }
+</style>
+{% endblock css %}
+
+{% block navbar %}
+    <!-- Navbar Start -->
+    {% include 'eshop/navbar_fixed.html' %}
+    <!-- Navbar End -->
+{% endblock navbar %}
+
+{% block content %}
+    <!-- Cart Start -->
+    <div class="container-fluid pt-5">
+        <div class="text-center mb-4">
+            <h2 class="section-title px-5"><span class="px-2">{{ title|title }}</span></h2>
+            <span class="px-2 d-block">Before Checkout, Please, Update your Profile.</span>
+        </div>
+        <div class="row px-xl-5">
+            <div id="paypal-button-container"></div>
+            <div class="col-lg-12">
+                {% crispy form %}
+            </div>
+        </div>
+    </div>
+    <!-- Cart End -->
+{% endblock content %}    
+{% block js %}
+    <!-- paypal checkout -->
+    <script src="https://www.paypal.com/sdk/js?client-id=ATN8ye9zM_wlyM3NQrSTsxOIV1hKtbd0s6TFe_EN9m8RWpKtvJ2nhzXViLxxDUoG8SlAyxkkFHlm_8x-&currency=USD"></script>
+    <!-- Checkout Javascript -->
+    {% comment %} <script src="{% static 'eshop/js/checkout.js' %}"></script> {% endcomment %}
+    {% comment %} sweetalart2 {% endcomment %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    const form = document.getElementById("id_checkout_form");
+    const paypal_btn = document.getElementById("paypal-button-container");
+    const csrfmiddlewaretoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const totalAmount = '{{ cart.grand_total }}';
+    
+    const validateFormAndCheckout = () => {
+        const url = '/orders/checkout/';
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfmiddlewaretoken
+            },
+            body: new FormData(form)
+        }).then(response => {
+            return response.json();
+        }).then(data => {
+            if (data.success) {
+                paypal_btn.style.display = 'block';
+                form.style.display = 'none';
+            }
+            else {
+                console.log(data);
+            }
+        }).catch(error => {
+            console.log(error);
+        })
+    }
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        validateFormAndCheckout();
+    })
+
+
+// PAYPAL INTREGATION START FROM HERE ------
+    paypal.Buttons({
+        createOrder: (data, actions) => {
+            return actions.order.create({
+                purchase_units: [{
+                    amount: {
+                        value: parseFloat(totalAmount).toFixed(2) // 
+                    }
+                }]
+            });
+        },
+        // Execute the payment
+        onApprove: (data, actions) => {
+            return actions.order.capture().then(function(orderData) {
+                console.log('purchase Unit back', orderData);
+                // Show a confirmation message to the buyer
+                const transaction = orderData.purchase_units[0].payments.captures[0];
+                const amount = parseFloat(transaction.amount.value).toFixed(2)
+                const transaction_id = transaction.id;
+                let customer = {};
+                new FormData(form).forEach((value, key) => {
+                    customer[key] = value;
+                })
+                delete customer['csrfmiddlewaretoken'];
+                customer['amount'] = amount;
+                customer['paypal_transaction_id'] = transaction_id;
+                
+                console.log('Data send to backend...');
+                fetch('/orders/save-order/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfmiddlewaretoken
+                    },
+                    body: JSON.stringify(customer)
+                }).then(response => {
+                    return response.json();
+                }).then(data => {
+                    if (data.success) {
+                        Swal.fire(
+                        'Congrats!',
+                        'Your Order Placed Success!',
+                        'success'
+                        )
+                    }
+                    else {
+                        Swal.fire(
+                        'Error!',
+                        'Somethings went wrong.',
+                        'error'
+                        )
+                    }
+                }).catch(error => {
+                    console.log(error);
+                })
+            });
+        }
+    }).render('#paypal-button-container');
+</script>
+{% endblock js %}

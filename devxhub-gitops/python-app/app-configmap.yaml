@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: devxhub
+data:
+  REDIS_URL: "redis://redis-service:6379/0"
+  STATIC_URL: "/static/"
+  STATIC_ROOT: "/app/static/static_root"
+

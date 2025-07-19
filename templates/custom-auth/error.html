@@ -1,0 +1,13 @@
+{% extends 'eshop/index.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ error_code }}{%endblock%}
+
+{% block body %}
+<main class="container">
+    <h1>{{ error_code }}</h1>
+    <h3>{{ error_title }}</h3>
+    <p>{{ error_message }}</p>
+</main>
+{% endblock body %}
