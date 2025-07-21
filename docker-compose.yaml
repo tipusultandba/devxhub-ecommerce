@@ -23,8 +23,7 @@ services:
       - db
       - redis
     env_file:
-      - .env
-
+      - .env      
   nginx:
     image: nginx:latest
     ports:
@@ -34,12 +33,22 @@ services:
       - static_volume:/app/static # Volume for static files
     depends_on:
       - web
-
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+    - 8051:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    depends_on:
+    - redis
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
-
 volumes:
   postgres_data:
   static_volume:
